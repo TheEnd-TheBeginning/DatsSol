@@ -9,9 +9,11 @@ import SwiftUI
 
 @main
 struct DatsSolApp: App {
+    let mapManager = MapManager()
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environment(mapManager)
         }
     }
 }
