@@ -16,10 +16,29 @@ struct ContentView: View {
                 MapView()
                     .toolbar {
                         ToolbarItem {
-                            let mainPlantationPosition = mapManager.arena?.plantations.first(where: { $0.isMain })?.position ?? [0,0]
-                            Text("[x: \(mainPlantationPosition.first!), y: \(mainPlantationPosition.last!)]")
+                            let plantationPosition = mapManager.plantationPosition ?? [0,0]
+                            Text("[x: \(plantationPosition.first!), y: \(plantationPosition.last!)]")
                                 .frame(maxWidth: .infinity)
                         }
+                        
+                        ToolbarItem(placement: .primaryAction) {
+                            Button("Send repeated command", systemImage: "command") {
+                                mapManager.sendRepeatedCommand()
+                            }
+                        }
+                        
+                        ToolbarItem {
+                            Button("Stop repeated command", systemImage: "stop.circle") {
+                                mapManager.stopRepeatedRequest()
+                            }
+                        }
+                        
+                        ToolbarItem {
+                            Button("Reset chosen position", systemImage: "restart.circle") {
+                                mapManager.stopRepeatedRequest()
+                            }
+                        }
+                        
                         ToolbarItem(placement: .primaryAction) {
                             Button("Update", systemImage: "arrow.clockwise") {
                                 Task {
@@ -32,25 +51,6 @@ struct ContentView: View {
                             }
                         }
                     }
-            }
-        }
-        .task {
-//            Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { timer in
-//                Task {
-//                    do {
-//                        try await mapManager.sendArenaRequest()
-//                    } catch {
-//                        timer.invalidate()
-//                        print(error.localizedDescription)
-//                    }
-//                }
-//            }
-            Task {
-                do {
-                    try await mapManager.sendArenaRequest()
-                } catch {
-                    print(error.localizedDescription)
-                }
             }
         }
         .padding()
