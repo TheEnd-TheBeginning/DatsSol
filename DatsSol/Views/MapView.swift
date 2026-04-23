@@ -8,47 +8,97 @@
 import SwiftUI
 
 struct MapView: View {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(MapManager.self) private var mapManager
     
-    @State private var scale: CGFloat = 1.0
-    @GestureState private var magnifyBy = 1.0
-
-    var magnification: some Gesture {
-        MagnifyGesture()
-            .updating($magnifyBy) { value, state, _ in
-                state = value.magnification
-            }
-            .onEnded { value in
-                scale *= value.magnification
-            }
+    @Binding var needTeleport: Bool
+    @Binding var scale: CGFloat
+    
+    @GestureState private var magnifyBy: CGFloat = 1.0
+    
+    var maxScale: CGFloat {
+        return horizontalSizeClass == .compact ? 1 : 3
+    }
+    var minScale: CGFloat {
+        return horizontalSizeClass == .compact ? 0.19 : 0.41
+    }
+    var arenaD: Int {
+        return mapManager.arenaRadius * 2
     }
     
-    private var gridColumns: [GridItem] {
-        Array(repeating: GridItem(.flexible()), count: 10)
-    }
-    private var gridRows: [GridItem] {
-        Array(repeating: GridItem(.flexible()), count: 10)
+    var magnification: some Gesture {
+        MagnifyGesture()
+            .updating($magnifyBy) { value, gestureState, _ in
+                guard value.magnification < maxScale,
+                      value.magnification > minScale else { return }
+                gestureState = value.magnification
+            }
+            .onEnded { value in
+                let currScale = scale * value.magnification
+                guard currScale < maxScale else {
+                    scale = maxScale
+                    return
+                }
+                guard currScale > minScale else {
+                    scale = minScale
+                    return
+                }
+            
+                scale = currScale
+            }
     }
     
     var body: some View {
+        ScrollViewReader { proxy in
+            ScrollView([.horizontal, .vertical], showsIndicators: false) {
+                mapGrid
+                    .onChange(of: needTeleport) {
+                        if needTeleport {
+                            teleportToMain(proxy: proxy)
+                        }
+                    }
+                    .background(
+                        Image(ImageResource.marsBackground)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    )
+                    .scaleEffect(scale)
+                    .gesture(magnification)
+                    .frame(maxWidth: CGFloat(arenaD) * mapManager.scaleFactor * scale,
+                           maxHeight: CGFloat(arenaD) * mapManager.scaleFactor * scale)
+            }
+            .scrollBounceBehavior(.basedOnSize, axes: [.horizontal,.vertical])
+        }
+        .clipShape(Circle())
+    }
+    
+    private var mapGrid: some View {
         Grid(horizontalSpacing: 2, verticalSpacing: 2) {
-            ForEach(0..<mapManager.mapSize.x, id: \.self) { y in
+            ForEach(0..<arenaD, id: \.self) { y in
                 GridRow {
-                    ForEach(0..<mapManager.mapSize.y, id: \.self) { x in
+                    ForEach(0..<arenaD, id: \.self) { x in
                         let actualPosition = [x + mapManager.xShift, y + mapManager.yShift]
-                        FieldView(position: actualPosition)
+                        FieldView(actualPosition: actualPosition)
+                            .animation(.default, value: actualPosition)
+                            .id([x,y])
                     }
                 }
             }
         }
-        .scaleEffect(scale * magnifyBy)
-        .gesture(magnification)
-        .clipShape(Circle())
-        .background(.black)
-    }    
+    }
+    
+    private func teleportToMain(proxy: ScrollViewProxy) {
+        withAnimation {
+            let x = mapManager.arenaRadius
+            let y = mapManager.arenaRadius
+            proxy.scrollTo([x, y], anchor: .center)
+        }
+        needTeleport = false
+    }
 }
 
 #Preview {
-    MapView()
-        .environment(MapManager())
+    @Previewable @State var needTeleport: Bool = false
+    @Previewable @State var scale: CGFloat = 1
+    MapView(needTeleport: $needTeleport, scale: $scale)
 }

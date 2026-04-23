@@ -6,13 +6,17 @@
 //
 
 import Foundation
-internal import Combine
+import SwiftUI
 
 @Observable
 class MapManager {
+    static let shared = MapManager()
+    
+    private init() {}
+    
     var mapSize: (x: Int, y: Int) = (0,0)
     var scaleFactor: CGFloat = 50
-    var areaRadius: Int = 10
+    var arenaRadius: Int = 20
     var arena: Arena?
     var xShift = 0
     var yShift = 0
@@ -40,7 +44,9 @@ class MapManager {
                 if oldMainPosition != self.plantationPosition {
                     self.chosenPosition = choosePosition()
                 }
-                setSize()
+                withAnimation {
+                    setShift()
+                }
             }
         } catch {
             throw error
@@ -162,6 +168,17 @@ class MapManager {
         }
     }
     
+    func stormRadius(position: [Int]) -> CGFloat {
+        return CGFloat(arena?.meteoForecasts.first(where: { $0.position == position })?.radius ?? 0) * scaleFactor
+    }
+    
+    private func setShift() {
+        guard let arena else { return }
+        let mainPosition = arena.plantations.first(where: { $0.isMain })?.position ?? [0,0]
+        self.xShift = mainPosition.first! - arenaRadius
+        self.yShift = mainPosition.last! - arenaRadius
+    }
+    
     private func setSize() {
         guard let arena else { return }
         var minX = Int.max
@@ -184,10 +201,10 @@ class MapManager {
             }
         }
         
-        minX = max(minX - areaRadius, 0)
-        maxX = min(maxX + areaRadius, arena.size.first!)
-        minY = max(minY - areaRadius, 0)
-        maxY = min(maxY + areaRadius, arena.size.last!)
+//        minX = max(minX - arenaRadius, 0)
+//        maxX = min(maxX + arenaRadius, arena.size.first!)
+//        minY = max(minY - arenaRadius, 0)
+//        maxY = min(maxY + arenaRadius, arena.size.last!)
         
         let width = minX == maxX ? minX : maxX - minX
         let height = minY == maxY ? minY : maxY - minY

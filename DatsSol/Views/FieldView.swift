@@ -8,27 +8,16 @@
 import SwiftUI
 
 struct FieldView: View {
+    @Environment(MapManager.self) private var mapManager
+    
     var actualPosition: [Int]
     
-    @Environment(MapManager.self) private var mapManager
- 
-    init(position: [Int]) {
-        self.actualPosition = position
-    }
-    
     var body: some View {
-        Button {
-//            let isMyPlantation = mapManager.arena!.plantations.contains(where: { $0.position == actualPosition})
-//            if isMyPlantation {
-//                mapManager.plantationPosition = actualPosition
-//            } else {
-//                mapManager.chosenPosition = actualPosition
-//            }
-        } label: {
-            fieldView
-                .border(borderColor)
-        }
-        .frame(width: mapManager.scaleFactor, height: mapManager.scaleFactor)
+        fieldView
+            .frame(width: mapManager.scaleFactor, height: mapManager.scaleFactor)
+            .overlay {
+                RadiusView(actualPosition: actualPosition, fieldType: fieldType)
+            }
     }
     
     var borderColor: Color {
@@ -36,23 +25,40 @@ struct FieldView: View {
             mapManager.chosenPosition == actualPosition {
             return .purple
         }
-        return .clear
+        return .black
     }
     
     private var fieldView: some View {
         Group {
-            let fieldType = getFieldType(position: actualPosition)
             ZStack(alignment: .center) {
-                Rectangle()
-                    .foregroundStyle(fieldType.color)
+                RoundedRectangle(cornerRadius: 5)
+                    .fill(fieldType.color)
+                    .strokeBorder(borderColor, lineWidth: 2)
                 
                 switch fieldType {
-                case .construction(let progress), .terraformed(let progress):
+                case .construction(let progress):
                     Text("\(progress)")
+                case .terraformed(let progress):
+                    VStack(alignment: .center) {
+                        Text("🌵")
+                            .font(.headline)
+                        Text("\(progress)")
+                            .font(.footnote)
+                    }
                 case .myPlantation(let isMain):
                     if !isMain {
                         Text("✅")
                     }
+                case .sandstorm(let isCurrentPosition):
+                    Text("🌪️")
+                        .font(.largeTitle)
+                        .opacity(isCurrentPosition ? 1 : 0.5)
+                case .beaver:
+                    Text("🦫")
+                        .font(.largeTitle)
+                case .mountain:
+                    Text("🌋")
+                        .font(.largeTitle)
                 default:
                     Text("")
                 }
@@ -60,33 +66,30 @@ struct FieldView: View {
         }
     }
     
-    func getFieldType(position: [Int]) -> FieldType {
-        if let plantation = mapManager.arena?.plantations.first(where: { $0.position == position }) {
+    var fieldType: FieldType {
+        if let plantation = mapManager.arena?.plantations.first(where: { $0.position == actualPosition }) {
             return .myPlantation(plantation.isMain)
         }
-        if let _ = mapManager.arena?.enemy.first(where: {$0.position == position}) {
+        if let _ = mapManager.arena?.enemy.first(where: { $0.position == actualPosition }) {
             return .enemyPlantation
         }
-        if mapManager.arena?.mountains.contains(position) == true {
+        if mapManager.arena?.mountains.contains(actualPosition) == true {
             return .mountain
         }
-        if let cell = mapManager.arena?.cells.first(where: { $0.position == position }) {
+        if let cell = mapManager.arena?.cells.first(where: { $0.position == actualPosition }) {
             return .terraformed(cell.terraformationProgress)
         }
-        if let _ = mapManager.arena?.beavers.first(where: {$0.position == position}) {
+        if let _ = mapManager.arena?.beavers.first(where: {$0.position == actualPosition }) {
             return .beaver
         }
-        if let construction = mapManager.arena?.construction.first(where: {$0.position == position}) {
+        if let construction = mapManager.arena?.construction.first(where: { $0.position == actualPosition }) {
             return .construction(construction.progress)
         }
-        if let currentStorm = mapManager.arena?.meteoForecasts.first(where: { $0.position == position && $0.kind == .sandstorm }) {
+        if let _ = mapManager.arena?.meteoForecasts.first(where: { $0.position == actualPosition && $0.kind == .sandstorm }) {
             return .sandstorm(true)
         }
-        if let nextStorm = mapManager.arena?.meteoForecasts.first(where: { $0.nextPosition == position && $0.kind == .sandstorm }) {
+        if let _ = mapManager.arena?.meteoForecasts.first(where: { $0.nextPosition == actualPosition && $0.kind == .sandstorm }) {
             return .sandstorm(false)
-        }
-        if let earthquake = mapManager.arena?.meteoForecasts.first(where: { $0.position == position && $0.kind == .earthquake }) {
-            return .earthquake
         }
         return .plain
     }

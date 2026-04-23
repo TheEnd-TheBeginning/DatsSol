@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-enum FieldType {
+enum FieldType: Equatable {
     case myPlantation(Bool)
     case enemyPlantation
     case mountain
@@ -25,19 +25,19 @@ enum FieldType {
         case .enemyPlantation:
             return .red
         case .mountain:
-            return .orange
+            return .red.opacity(0.4)
         case .terraformed(let progress):
-            return .yellow.mix(with: .brown, by: Double(progress)/10)
+            return .forestGreen.opacity(Double(progress)/100)
         case .beaver:
-            return .blue
+            return .blue.opacity(0.3)
         case .plain:
-            return .yellow
+            return .clear
         case .construction(let progress):
             return .yellow.mix(with: .gray, by: Double(progress)/10)
         case .sandstorm(let isCurrentPosition):
-            return isCurrentPosition ? .indigo : .indigo.opacity(0.3)
+            return isCurrentPosition ? .indigo.opacity(0.5) : .indigo.opacity(0.2)
         case .earthquake:
-            return .teal
+            return .pink
         }
     }
 }
