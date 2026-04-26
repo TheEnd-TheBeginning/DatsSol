@@ -8,7 +8,7 @@ The game arena is visualized as the planet Mars in space to match the game theme
 <table frame="void" rules="none" border="0" cellspacing="0" cellpadding="0">
   <thead>
     <tr style="border: none;">
-      <th style="border: none;" align="center">Mac representation</th>
+      <th style="border: none;" align="center">Mac Representation</th>
     </tr>
   </thead>
   <tbody>
