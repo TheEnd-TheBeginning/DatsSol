@@ -8,6 +8,8 @@
 import Foundation
 
 class Beaver: Codable {
+    static let actionRange: CGFloat = 20
+    
     /// — идентификатор цели.
     let id: String
     /// — координата `[x, y]`.

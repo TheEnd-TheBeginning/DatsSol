@@ -14,15 +14,26 @@ class MapManager {
     
     private init() {}
     
-    var mapSize: (x: Int, y: Int) = (0,0)
-    var scaleFactor: CGFloat = 50
-    var arenaRadius: Int = 20
-    var arena: Arena?
-    var xShift = 0
-    var yShift = 0
-    var timerIterator = 0
+    static let arenaRadius: Int = 20
+    var arena: Arena? {
+        didSet {
+            withAnimation {
+                setShift()
+            }
+        }
+    }
+    
     let network = Network()
     var repeatingTask: Task<Void, Error>?
+    
+    let mapSnapshot: [FieldManager] = Array(0..<(MapManager.arenaRadius * 2)).flatMap { x in
+        var row = [FieldManager]()
+        for y in 0..<(MapManager.arenaRadius * 2) {
+            let fieldManager = FieldManager(mapPosition: [x,y])
+            row.append(fieldManager)
+        }
+        return row
+    }
     
     var plantationPosition: [Int]? {
         return arena?.plantations.first(where: { $0.isMain })?.position
@@ -43,9 +54,6 @@ class MapManager {
                 guard let arena, arena.turnNo != 0 else { throw ArenaError.noData("No data") }
                 if oldMainPosition != self.plantationPosition {
                     self.chosenPosition = choosePosition()
-                }
-                withAnimation {
-                    setShift()
                 }
             }
         } catch {
@@ -114,7 +122,7 @@ class MapManager {
                                               plantationUpgrade: plantationUpgrade,
                                               relocateMain: relocateMain)
             let jsonData = try JSONEncoder().encode(commandJson)
-
+            
             if let commandData = try await self.network.sendRequest(httpMethod: .post, apiMethod: .command, bodyData: jsonData) {
                 print(String(data: commandData, encoding: .utf8)!)
                 let commandResponse = try JSONDecoder().decode(Command.Response.self, from: commandData)
@@ -169,48 +177,29 @@ class MapManager {
     }
     
     func stormRadius(position: [Int]) -> CGFloat {
-        return CGFloat(arena?.meteoForecasts.first(where: { $0.position == position })?.radius ?? 0) * scaleFactor
+        return CGFloat(arena?.meteoForecasts.first(where: { $0.position == position })?.radius ?? 0) * FieldManager.fieldScale
     }
     
     private func setShift() {
         guard let arena else { return }
+        
         let mainPosition = arena.plantations.first(where: { $0.isMain })?.position ?? [0,0]
-        self.xShift = mainPosition.first! - arenaRadius
-        self.yShift = mainPosition.last! - arenaRadius
+        let xShift = mainPosition.first! - MapManager.arenaRadius
+        let yShift = mainPosition.last! - MapManager.arenaRadius
+        updateSnapshot(xShift: xShift, yShift: yShift)
     }
     
-    private func setSize() {
+    private func updateSnapshot(xShift: Int, yShift: Int) {
         guard let arena else { return }
-        var minX = Int.max
-        var maxX = 0
-        var minY = Int.max
-        var maxY = 0
-        for plantation in arena.plantations {
-            let position = plantation.position
-            if position.first! < minX {
-                minX = position.first!
-            }
-            if position.first! > maxX {
-                maxX = position.first!
-            }
-            if position.last! < minY {
-                minY = position.last!
-            }
-            if position.last! > maxY {
-                maxY = position.last!
-            }
+        
+        for field in mapSnapshot {
+            let actualPosition = [
+                field.mapPosition.first! - xShift,
+                field.mapPosition.last! - yShift
+            ]
+            let fieldType = arena.getFieldType(actualPosition: actualPosition)
+            let fieldRadius = arena.getFieldRadius(actualPosition: actualPosition)
+            field.setField(actualPosition: actualPosition, fieldType: fieldType, radius: fieldRadius)
         }
-        
-//        minX = max(minX - arenaRadius, 0)
-//        maxX = min(maxX + arenaRadius, arena.size.first!)
-//        minY = max(minY - arenaRadius, 0)
-//        maxY = min(maxY + arenaRadius, arena.size.last!)
-        
-        let width = minX == maxX ? minX : maxX - minX
-        let height = minY == maxY ? minY : maxY - minY
-        
-        xShift = minX == maxX ? 0 : minX
-        yShift = minY == maxY ? 0 : minY
-        mapSize = (width, height)
     }
 }

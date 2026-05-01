@@ -15,6 +15,13 @@ struct MapView: View {
     @Binding var scale: CGFloat
     
     @GestureState private var magnifyBy: CGFloat = 1.0
+
+    var gridRows: [GridItem] {
+        return Array<GridItem>(
+            repeating: GridItem(.fixed(FieldManager.fieldScale), spacing: 2),
+            count: MapManager.arenaRadius * 2
+        )
+    }
     
     var maxScale: CGFloat {
         return horizontalSizeClass == .compact ? 1 : 3
@@ -23,7 +30,7 @@ struct MapView: View {
         return horizontalSizeClass == .compact ? 0.19 : 0.41
     }
     var arenaD: Int {
-        return mapManager.arenaRadius * 2
+        return MapManager.arenaRadius * 2
     }
     
     var magnification: some Gesture {
@@ -64,8 +71,8 @@ struct MapView: View {
                     )
                     .scaleEffect(scale)
                     .gesture(magnification)
-                    .frame(maxWidth: CGFloat(arenaD) * mapManager.scaleFactor * scale,
-                           maxHeight: CGFloat(arenaD) * mapManager.scaleFactor * scale)
+                    .frame(maxWidth: CGFloat(arenaD) * FieldManager.fieldScale * scale,
+                           maxHeight: CGFloat(arenaD) * FieldManager.fieldScale * scale)
             }
             .scrollBounceBehavior(.basedOnSize, axes: [.horizontal,.vertical])
         }
@@ -73,24 +80,18 @@ struct MapView: View {
     }
     
     private var mapGrid: some View {
-        Grid(horizontalSpacing: 2, verticalSpacing: 2) {
-            ForEach(0..<arenaD, id: \.self) { y in
-                GridRow {
-                    ForEach(0..<arenaD, id: \.self) { x in
-                        let actualPosition = [x + mapManager.xShift, y + mapManager.yShift]
-                        FieldView(actualPosition: actualPosition)
-                            .animation(.default, value: actualPosition)
-                            .id([x,y])
-                    }
-                }
+        LazyHGrid(rows: gridRows, spacing: 2) {
+            ForEach(mapManager.mapSnapshot) { field in
+                FieldView(field: field)
+                    .id(field.mapPosition)
             }
         }
     }
     
     private func teleportToMain(proxy: ScrollViewProxy) {
         withAnimation {
-            let x = mapManager.arenaRadius
-            let y = mapManager.arenaRadius
+            let x = MapManager.arenaRadius
+            let y = MapManager.arenaRadius
             proxy.scrollTo([x, y], anchor: .center)
         }
         needTeleport = false

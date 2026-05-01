@@ -22,7 +22,7 @@ struct ContentView: View {
     }
     
     var arenaRadius: CGFloat {
-        return CGFloat(mapManager.arenaRadius)
+        return CGFloat(MapManager.arenaRadius)
     }
     
     var body: some View {
@@ -48,7 +48,7 @@ struct ContentView: View {
                     }
                     .padding()
                 }
-                .frame(maxWidth: horizontalSizeClass == .compact ? .infinity : arenaRadius * mapManager.scaleFactor, maxHeight: .infinity)
+                .frame(maxWidth: horizontalSizeClass == .compact ? .infinity : arenaRadius * FieldManager.fieldScale, maxHeight: .infinity)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .toolbar {
